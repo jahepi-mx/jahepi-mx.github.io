@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Zombie Pix</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style type="text/css">
+            * {
+                margin: 0;
+                padding: 0;
+            }
+            @font-face { font-family: 'joystix'; src: url('assets/fonts/PixelMYZ.ttf'); }
+        </style>
+        <script src="maps/map.js"></script>
+        <script src="maps/map1.js"></script>
+        <script src="maps/map2.js"></script>
+        <script src="entities/entity.js"></script>
+        <script src="entities/tile.js"></script>
+        <script src="entities/cursor.js"></script>
+        <script src="entities/camera.js"></script>
+        <script src="entities/zombiekiller.js"></script>
+        <script src="entities/zombie.js"></script>
+        <script src="entities/spawnzombie.js"></script>
+        <script src="entities/zombiesnake.js"></script>
+        <script src="entities/bullet.js"></script>
+        <script src="entities/eye.js"></script>
+        <script src="entities/movingeye.js"></script>
+        <script src="entities/eyebullet.js"></script>
+        <script src="entities/movingeyebullet.js"></script>
+        <script src="entities/zombiebodypart.js"></script>
+        <script src="entities/blood.js"></script>
+        <script src="entities/crate.js"></script>
+        <script src="entities/barrel.js"></script>
+        <script src="entities/life.js"></script>
+        <script src="entities/exit.js"></script>
+        <script src="utils/priorityqueue.js"></script>
+        <script src="utils/assets.js"></script>
+        <script src="utils/atlas.js"></script>
+        <script src="utils/animation.js"></script>
+        <script src="controller.js"></script>
+        <script src="config/config.js"></script>
+        <script src="scenes/scene.js"></script>
+        <script src="scenes/gamescene.js"></script>
+        <script src="scenes/mainscene.js"></script>
+        <script src="scenes/endscene.js"></script>
+        <script src="scenes/settingscene.js"></script>
+        <script src="ui/button.js"></script>
+        <script src="ui/slider.js"></script>
+        <script src="maps/events/event.js"></script>
+        <script src="maps/events/map1events.js"></script>
+        <script src="maps/events/map2events.js"></script>
+        <script type="text/javascript">
+            var canvas = null;
+            var context = null;
+            var prevTime = 0;
+            var scene = null;
+            var cursor = Cursor.getInstance();
+            var targetFps = 1 / 30;
+            var targetDeltatime = 0;
+            var lockFps = false;
+            var resize = true;
+            
+            window.onload = function() {
+                var config = Config.getInstance();
+                canvas = document.getElementById("canvas");
+                
+                if (resize) {
+                    var ratio = 1; //0.90;
+                    var screenRatio = config.canvasWidth / config.canvasHeight;
+                    var width = window.screen.availHeight * screenRatio;
+                    var tileRatio = config.tileWidth / config.canvasWidth;
+                    width = Math.floor(width * ratio);
+                    config.canvasWidth = width;
+                    config.canvasHeight = Math.floor(width / screenRatio);
+                    config.tileWidth = Math.floor(width * tileRatio);
+                    config.tileHeight = Math.floor(width * tileRatio);
+                }
+                
+                canvas.width = config.canvasWidth;
+                canvas.height = config.canvasHeight;
+                context = canvas.getContext("2d");
+                var assets = Assets.getInstance();
+                assets.loadAll(onLoadAssets, onDownloadAssets);
+            };
+            
+            function onDownloadAssets() {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Assets.getInstance().getLoadedRatio() * 100);
+                context.font = Math.floor(canvas.height * .14) + "px joystix";;
+                context.fillStyle = "#fff";
+                context.textAlign = "center";
+                context.fillText("Downloading Assets " + percentage + "%", canvas.width / 2, canvas.height * 0.3);
+                context.beginPath();
+                var radius = canvas.width * 0.07;
+                context.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2 * Assets.getInstance().getLoadedRatio(), false);
+                context.lineWidth = canvas.width * 0.01;
+                context.strokeStyle = 'red';
+                context.stroke();
+            }
+            
+            function onDownloadAtlas() {
+                context.clearRect(0, 0, canvas.width, canvas.height);
+                context.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Atlas.getInstance().getLoadedRatio() * 100);
+                context.font = Math.floor(canvas.height * .14) + "px joystix";;
+                context.fillStyle = "#fff";
+                context.textAlign = "center";
+                context.fillText("Downloading Atlas " + percentage + "%", canvas.width / 2, canvas.height * 0.3);
+                context.beginPath();
+                var radius = canvas.width * 0.07;
+                context.arc(canvas.width / 2, canvas.height / 2, radius, 0, Math.PI * 2 * Atlas.getInstance().getLoadedRatio(), false);
+                context.lineWidth = canvas.width * 0.01;
+                context.strokeStyle = 'blue';
+                context.stroke();
+            }
+            
+            function update(currTime) {
+                var diff = currTime - prevTime;
+                var deltatime = diff / 1000;
+                prevTime = currTime;
+                if (1 / deltatime >= 3) {
+                    if (lockFps) {
+                        targetDeltatime += deltatime;
+                        if (targetDeltatime >= targetFps) {
+                            deltatime = targetDeltatime;
+                            targetDeltatime = 0;
+                            scene.update(deltatime);
+                            scene.render();
+                        }
+                    } else {
+                        scene.update(deltatime);
+                        scene.render();
+                    }
+                }
+                window.requestAnimationFrame(update);
+            }
+            
+            function onLoadAssets() {
+                var atlas = Atlas.getInstance();
+                atlas.loadAll(onLoadAtlas, onDownloadAtlas);
+            }
+            
+            function onLoadAtlas() {
+                canvas.addEventListener("mousemove", function(evt) {
+                    var rect = canvas.getBoundingClientRect();
+                    var x = evt.clientX - rect.left;
+                    var y = evt.clientY - rect.top;
+                    cursor.update(x, y);
+                });
+                
+                canvas.addEventListener("mousedown", function(evt) {
+                    cursor.isPressed = true;
+                });
+
+                canvas.addEventListener("mouseup", function(evt) {
+                    cursor.isPressed = false;
+                });
+                
+                canvas.addEventListener("mouseout", function(evt) {
+                    cursor.isPressed = false;
+                });
+                
+                scene = new MainScene(canvas, context, changeScene);
+                var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+                window.requestAnimationFrame = requestAnimationFrame;
+                window.requestAnimationFrame(update);
+            }
+            
+            function changeScene(sceneName) {
+                if (sceneName === "mainscene") {
+                    scene = new MainScene(canvas, context, changeScene);
+                } else if (sceneName === "gamescene") {
+                    scene = new GameScene(canvas, context, changeScene);
+                } else if (sceneName === "endscene") {
+                    scene = new EndScene(canvas, context, changeScene);
+                } else if (sceneName === "settingscene") {
+                    scene = new SettingScene(canvas, context, changeScene);
+                }
+            }
+        </script>
+    </head>
+    <body style="background-color: #0f082e">
+        <div style="margin: 0 auto; text-align: center">
+            <canvas id="canvas"></canvas>
+            <span style="font-family: joystix; display: none">Hidden text just for loading font before canvas.</span>
+        </div>
+    </body>
+</html>
