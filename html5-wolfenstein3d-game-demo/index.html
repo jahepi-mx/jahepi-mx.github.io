@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <style type="text/css">
+            @font-face { font-family: 'joystix'; src: url('assets/fonts/PixelMYZ.ttf'); }
+            #game { 
+                height: 100vh; 
+                width: 100vw; 
+                display: block;
+              }
+        </style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script type="text/javascript" src="vector.js"></script>
+        <script type="text/javascript" src="player.js"></script>
+        <script type="text/javascript" src="tile.js"></script>
+        <script type="text/javascript" src="movingwall.js"></script>
+        <script type="text/javascript" src="maps/levelmanager.js"></script>
+        <script type="text/javascript" src="maps/map.js"></script>
+        <script type="text/javascript" src="maps/level1.js"></script>
+        <script type="text/javascript" src="maps/level2.js"></script>
+        <script type="text/javascript" src="maps/level3.js"></script>
+        <script type="text/javascript" src="sprite.js"></script>
+        <script type="text/javascript" src="bullet.js"></script>
+        <script type="text/javascript" src="priorityqueue.js"></script>
+        <script type="text/javascript" src="enemies/soldier.js"></script>
+        <script type="text/javascript" src="enemies/dog.js"></script>
+        <script type="text/javascript" src="enemies/boss.js"></script>
+        <script type="text/javascript" src="door.js"></script>
+        <script type="text/javascript" src="life.js"></script>
+        <script type="text/javascript" src="raycaster.js"></script>
+        <script type="text/javascript" src="raycasterrender.js"></script>
+        <script type="text/javascript" src="animation.js"></script>
+        <script type="text/javascript" src="assets.js"></script>
+        <script type="text/javascript" src="atlas.js"></script>
+        <script>
+            var previewWidth = 600;
+            var previewHeight = 240;
+            var gameResWidth = 320;
+            var gameResHeight = 180; //240;
+            var origX = 0;
+            var origY = previewHeight;
+            var aspectRatio = gameResWidth / gameResHeight;
+            var prevTime = 0;
+            var canvas, context, canvasGame, contextGame;
+            var player = null;
+            var map = null;
+            var enemies = [];
+            var raycaster = null;
+            var raycasterRender = null;
+            var outputWidth = gameResWidth * 2;
+            var pixelWidth = outputWidth / gameResWidth;
+            var outputHeight = outputWidth / aspectRatio;
+            var distToPlane = 0;
+            var restart = false;
+            var isTheEnd = false;
+            var levelManager = new LevelManager();
+            var music = null;
+            
+            window.onload = function() {
+                canvas = document.getElementById("canvas");
+                context = canvas.getContext("2d");
+                canvas.width = previewWidth;
+                canvas.height = previewHeight;
+                canvasGame = document.getElementById("game");
+                //canvasGame.style.cursor = "none";
+                contextGame = canvasGame.getContext("2d");
+                canvasGame.width = outputWidth;
+                canvasGame.height = outputHeight;
+                player = new Player(0, 0, 10);       
+                raycaster = new Raycaster(gameResWidth);
+                raycasterRender = new RaycasterRender();
+                distToPlane = (outputWidth / 2) / Math.tan(raycaster.fov / 2);
+                var assets = Assets.getInstance();
+                assets.loadAll(onLoadAssets, onDownloadAssets);
+            };
+            
+            function onLoadAssets() {
+                var atlas = Atlas.getInstance();
+                atlas.loadAll(onLoadAtlas, onDownloadAtlas);
+            }
+            
+            function onDownloadAssets() {
+                contextGame.clearRect(0, 0, canvasGame.width, canvasGame.height);
+                contextGame.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Assets.getInstance().getLoadedRatio() * 100);
+                contextGame.font = Math.floor(canvasGame.height * .07) + "px joystix";;
+                contextGame.fillStyle = "#ff0000";
+                contextGame.textAlign = "center";
+                contextGame.fillText("Downloading Assets " + percentage + "%", canvasGame.width / 2, canvasGame.height * 0.3);
+            }
+            
+            function onLoadAtlas() {
+                document.onkeydown = onKeyDown;
+                document.onkeyup = onKeyUp;
+                document.onmousedown = onMouseDown;
+                document.onmouseup = onMouseUp;
+                map = levelManager.load(player);  
+                requestAnimationFrame(update);
+            }
+            
+            function onDownloadAtlas() {
+                contextGame.clearRect(0, 0, canvasGame.width, canvasGame.height);
+                contextGame.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Atlas.getInstance().getLoadedRatio() * 100);
+                contextGame.font = Math.floor(canvasGame.height * .07) + "px joystix";;
+                contextGame.fillStyle = "#ff0000";
+                contextGame.textAlign = "center";
+                contextGame.fillText("Downloading Atlas " + percentage + "%", canvasGame.width / 2, canvasGame.height * 0.3);
+            }
+            var fpsLimitCount = 0;
+            function update(time) {
+                var dt = (time - prevTime) / 1000;
+                prevTime = time;
+                var fps = parseInt(1 / dt);
+                
+                // Limit frame: uncomment code below to limit frame to 30 fps
+                /*
+                var fpsLimit = 1 / 30;
+                fpsLimitCount += dt;
+                dt = fpsLimitCount;
+                fps = parseInt(1 / dt);
+                if (fpsLimitCount < fpsLimit) {
+                    requestAnimationFrame(update);
+                    return;
+                } else {
+                    fpsLimitCount = 0;
+                }
+                */
+                
+                if (fps < 4) {
+                    requestAnimationFrame(update);
+                    return;
+                }
+                
+                if (restart) {
+                    player.reset();
+                    raycasterRender.reset();
+                    map.reset();
+                    restart = false;
+                }
+
+                map.update(dt);
+                if (map.isFinished && !levelManager.isLast()) {
+                    levelManager.next();
+                    map = levelManager.load(player);
+                }
+                
+                context.clearRect(0, 0, previewWidth, previewHeight);
+                context.fillText(fps, previewWidth - 10, 10);
+                for (let tile of map.tiles) {
+                    tile.update(dt);
+                    //tile.render(context);
+                }
+                //for (let sprite of map.sprites) {
+                    //sprite.update(dt);
+                    //sprite.render(context);
+                //}
+                for (let enemy of map.enemies) {
+                    enemy.update(dt);
+                    //enemy.render(context);
+                }
+                player.update(dt);
+                //player.render(context);
+                
+                var data = raycaster.getData();
+                raycasterRender.data = data;
+                raycasterRender.render(contextGame, dt, fps);
+                
+                if (map.isFinished && levelManager.isLast()) {
+                    contextGame.fillText("WELL DONE!, THE GAME IS OVER ...", canvasGame.width / 2, canvasGame.height / 2);
+                }
+                requestAnimationFrame(update);
+            }
+            
+            function onKeyDown(evt) {
+                if (evt.keyCode === 87) player.forward(true);
+                if (evt.keyCode === 65) player.rotateLeft(true);
+                if (evt.keyCode === 68) player.rotateRight(true);
+                if (evt.keyCode === 83) player.backward(true);
+                if (evt.keyCode === 32) player.shoot(true);
+                if (evt.keyCode === 69) player.openDoor(true);
+                if (evt.keyCode === 82) {
+                    if (player.isDead) {
+                        restart = true;
+                    }
+                }
+            }
+            
+            function onKeyUp(evt) {
+                if (evt.keyCode === 87) player.forward(false);
+                if (evt.keyCode === 65) player.rotateLeft(false);
+                if (evt.keyCode === 68) player.rotateRight(false);
+                if (evt.keyCode === 83) player.backward(false);
+                if (evt.keyCode === 32) player.shoot(false);
+                if (evt.keyCode === 69) player.openDoor(false);
+            }
+            
+            function onMouseDown(evt) {
+                player.shoot(true);
+            }
+            
+            function onMouseUp(evt) {
+                player.shoot(false);
+            }
+        </script>
+    </head>
+    <body style="background-color: #000">
+        <div style="text-align: center; margin: 0 auto;">
+            <canvas style="display: visible" id="game"></canvas>
+        </div>
+        <canvas style="display: none" id="canvas"></canvas>
+        <span style="font-family: joystix; display: none">Hidden text just for loading font before canvas.</span>
+    </body>
+</html>
