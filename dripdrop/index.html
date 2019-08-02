@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>Drip Drop</title>
+        <meta charset="UTF-8">
+        <style type="text/css">
+            @font-face { font-family: 'joystix'; src: url('assets/fonts/PixelMYZ.ttf'); }
+            body * { font-family: joystix; color: white;}
+            body { background-color: black; }
+            #container { margin: 0 auto; text-align: center }
+        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="config/config.js"></script>
+        <script src="entities/entity.js"></script>
+        <script src="entities/tile.js"></script>
+        <script src="entities/fadetile.js"></script>
+        <script src="entities/movingtile.js"></script>
+        <script src="entities/smarttile.js"></script>
+        <script src="entities/cursor.js"></script>
+        <script src="entities/ice.js"></script>
+        <script src="entities/hand.js"></script>
+        <script src="entities/drop.js"></script>
+        <script src="entities/item.js"></script>
+        <script src="entities/checkpoint.js"></script>
+        <script src="levels/levelmanager.js"></script>
+        <script src="levels/level.js"></script>
+        <script src="levels/level1.js"></script>
+        <script src="levels/level2.js"></script>
+        <script src="levels/level3.js"></script>
+        <script src="levels/level4.js"></script>
+        <script src="levels/level5.js"></script>
+        <script src="levels/level6.js"></script>
+        <script src="levels/level7.js"></script>
+        <script src="levels/level8.js"></script>
+        <script src="levels/level9.js"></script>
+        <script src="levels/level10.js"></script>
+        <script src="utils/assets.js"></script>
+        <script src="utils/atlas.js"></script>
+        <script src="utils/priorityqueue.js"></script>
+        <script src="utils/animation.js"></script>
+        <script src="scenes/scene.js"></script>
+        <script src="scenes/gamescene.js"></script>
+        <script src="scenes/mainscene.js"></script>
+        <script src="scenes/leaderboardscene.js"></script>
+        <script src="scenes/popup.js"></script>
+        <script src="scenes/helppopup.js"></script>
+        <script src="scenes/finishpopup.js"></script>
+        <script type="text/javascript">
+            
+        var context;
+        var canvas;
+        var startTime = 0;
+        var cursor;
+        var scene;
+        
+        // Lock frame rate for testing purposes
+        var lock = 1 / 30; // 30 fps
+        var lockCount = 0;
+        var lockFramerate = false;
+        
+        
+        function callback(time) {
+            var deltatime = (time - startTime) / 1000;
+            startTime = time;
+            if (1 / deltatime >= 3) {
+                if (lockFramerate) {
+                    lockCount += deltatime;
+                    if (lockCount >= lock) {
+                        update(lockCount);
+                        render(context);
+                        lockCount = 0;
+                    }
+                } else {
+                    update(deltatime);
+                    render(context);
+                }
+            }
+            window.requestAnimationFrame(callback);
+        }
+        
+        function onLoadAssets() {
+            var atlas = Atlas.getInstance();
+            atlas.loadAll(onLoadAtlas);
+        }
+        
+        function onLoadAtlas() {
+            canvas.addEventListener("mousedown", function(evt) {
+                var rect = canvas.getBoundingClientRect();
+                var x = evt.clientX - rect.left;
+                var y = evt.clientY - rect.top;
+                cursor.isPressed = true;
+            });
+            
+            canvas.addEventListener("mouseup", function(evt) {
+                cursor.isPressed = false;
+            });
+            
+            canvas.addEventListener("mousemove", function(evt) {
+                var rect = canvas.getBoundingClientRect();
+                var x = evt.clientX - rect.left;
+                var y = evt.clientY - rect.top;
+                cursor.update(x, y);
+            });
+            scene = new MainScene(onChangeSceneCb);
+            window.requestAnimationFrame(callback);
+        }
+
+        function init() {   
+            var config = Config.getInstance();
+            canvas = document.getElementById("canvas");
+            canvas.width = config.mapWidth;
+            canvas.height = config.mapHeight;
+            context = canvas.getContext("2d");
+            
+            context.font = parseInt(config.getWidthByResolution(40)) + "px joystix";
+            context.fillStyle = 'white';
+            context.textAlign = "center";
+            context.fillText("loading...", config.mapWidth / 2, config.mapHeight / 2);
+            
+            cursor = Cursor.getInstance();  
+            var assets = Assets.getInstance();
+            assets.loadAll(onLoadAssets);
+        }
+        
+        function update(deltatime) {
+            scene.update(deltatime);     
+        }
+        
+        function render(context) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.imageSmoothingEnabled = false;
+            scene.render(context);
+        }
+        
+        function onChangeSceneCb(scenename) {
+            if (scenename === "game") {
+                scene = new GameScene(onChangeSceneCb);
+            } else if (scenename === "main") {
+                scene = new MainScene(onChangeSceneCb);
+            } else if (scenename === "leaderboard") {
+                scene = new LeaderBoardScene(onChangeSceneCb);
+            }
+        };
+        </script>
+    </head>
+    
+    <body onload="init()">
+        <div id="container">
+            <canvas id="canvas" style="background-color: #000; cursor: none"></canvas>
+            <span style="font-family: joystix; display: none">Hidden text just for loading font before canvas.</span>
+        </div>
+    </body>
+</html>

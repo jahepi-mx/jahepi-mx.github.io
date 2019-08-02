@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>JSTetris</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style type="text/css">
+            @font-face { font-family: 'joystix'; src: url('assets/fonts/PixelMYZ.ttf'); }
+            * {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+        <script src="scene.js"></script>
+        <script src="entities/board.js"></script>
+        <script src="entities/piece.js"></script>
+        <script src="entities/button.js"></script>
+        <script src="entities/tileAnimation.js"></script>
+        <script src="utils/assets.js"></script>
+        <script src="utils/atlas.js"></script>
+        <script src="utils/animation.js"></script>
+        <script type="text/javascript">
+            
+            var canvas = null;
+            var context = null;
+            var prevTime = 0;
+            var scene = null;
+            var screenWidth = 1920;
+            var screenHeight = 1080;
+            var screenRatio = screenWidth / screenHeight;
+            
+            window.onload = function() {
+                canvas = document.getElementById("canvas");
+                canvas.width = window.screen.availHeight * screenRatio;
+                canvas.height = window.screen.availHeight;
+                context = canvas.getContext("2d");
+                context.font = parseInt(canvas.width * 0.05) + "px joystix";
+                context.fillStyle = 'white';
+                context.textAlign = "center";
+                context.fillText("loading...", canvas.width / 2, canvas.height / 2);
+                var assets = Assets.getInstance();
+                assets.loadAll(onLoadAssets);
+            };
+            
+            function onLoadAssets() {
+                var atlas = Atlas.getInstance();
+                atlas.loadAll(onLoadAtlas);
+            }
+            
+            function onLoadAtlas() {
+                var requestAnimationFrame = window.requestAnimationFrame || window.mozRequestAnimationFrame || window.webkitRequestAnimationFrame || window.msRequestAnimationFrame;
+                scene = new Scene(canvas);
+                window.requestAnimationFrame = requestAnimationFrame;
+                window.requestAnimationFrame(update);
+            }
+            
+            function update(currTime) {
+                var diff = currTime - prevTime;
+                var deltatime = diff / 1000;
+                prevTime = currTime;
+                scene.update(deltatime);
+                scene.render(context);
+                window.requestAnimationFrame(update);
+            }
+        </script>
+    </head>
+    <body>
+        <div style="margin: 0 auto; text-align: center">
+            <canvas id="canvas" style="background-color: black;"></canvas>
+            <span style="font-family: joystix; display: none">Hidden text just for loading font before canvas.</span>
+        </div>
+    </body>
+</html>
