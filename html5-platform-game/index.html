@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Game Demo</title>
+        <meta charset="UTF-8">
+        <style type="text/css">
+            @font-face { font-family: 'joystix'; src: url('assets/fonts/PixelMYZ.ttf'); }
+            body * { font-family: joystix; color: white; font-size: 1.1em}
+            ul { list-style-type: none; }
+            body { background-color: black; }
+            #container { margin: 0 auto; text-align: center }
+            .item { color:red; }
+        </style>
+        <script src="engine/config/config.js"></script>
+        <script src="engine/levels/levelmanager.js"></script>
+        <script src="engine/levels/level1.js"></script>
+        <script src="engine/levels/level2.js"></script>
+        <script src="engine/levels/level3.js"></script>
+        <script src="engine/levels/level4.js"></script>
+        <script src="engine/levels/level5.js"></script>
+        <script src="engine/levels/level6.js"></script>
+        <script src="engine/entities/tile.js"></script>
+        <script src="engine/entities/hero.js"></script>
+        <script src="engine/entities/heroblast.js"></script>
+        <script src="engine/entities/coin.js"></script>
+        <script src="engine/entities/beetleenemy.js"></script>
+        <script src="engine/entities/lavaenemy.js"></script>
+        <script src="engine/entities/staticenemy.js"></script>
+        <script src="engine/entities/giantfatenemy.js"></script>
+        <script src="engine/entities/zombieenemy.js"></script>
+        <script src="engine/entities/spiderenemy.js"></script>
+        <script src="engine/entities/skeletonbossenemy.js"></script>
+        <script src="engine/entities/buoyenemy360.js"></script>
+        <script src="engine/entities/buoyenemy.js"></script>
+        <script src="engine/entities/flydemonenemy.js"></script>
+        <script src="engine/entities/flydemonbossenemy.js"></script>
+        <script src="engine/entities/dragonenemy.js"></script>
+        <script src="engine/entities/dragonbossenemy.js"></script>
+        <script src="engine/entities/enemyblast.js"></script>
+        <script src="engine/entities/movingplatform.js"></script>
+        <script src="engine/resources/assets.js"></script>
+        <script src="engine/resources/atlas.js"></script>
+        <script src="engine/camera.js"></script>
+        <script src="engine/gamerender.js"></script>
+        <script src="engine/gamecontroller.js"></script>
+        <script src="engine/animation.js"></script>
+        <script src="engine/scenes/gamescene.js"></script>
+        <script src="engine/scenes/mainscene.js"></script>
+        <script src="engine/scenes/creditsscene.js"></script>
+        <script src="engine/scenes/leaderboardscene.js"></script>
+        <script src="engine/scenes/endingscene.js"></script>
+        <script>
+            var scene;
+            var context;
+            var canvas;
+            var prevTimestamp = 0;
+            var isPaused = false;           
+            
+            window.onload = function() {
+                canvas = document.getElementById("game");
+                context = canvas.getContext("2d");
+                canvas.width = Config.worldWidth;
+                canvas.height = Config.worldHeight;
+                scene = new MainScene(context, canvas, changeSceneCallback);
+                window.requestAnimationFrame(onUpdate);    
+            };
+            
+            function onUpdate(timestamp) {
+                var deltatime = (timestamp - prevTimestamp) / 1000;
+                // 3 fps minimum to update and draw game state
+                if (1 / deltatime >= 3) {
+                    scene.update(deltatime);
+                }
+                prevTimestamp = timestamp;
+                window.requestAnimationFrame(onUpdate);
+            }
+            
+            function changeSceneCallback(sceneName, data) {
+                if (sceneName === "main") {
+                    scene = new MainScene(context, canvas, changeSceneCallback);
+                } else if (sceneName === "game") {
+                    scene = new GameScene(context, canvas, changeSceneCallback);
+                } else if (sceneName === "credits") {
+                    scene = new CreditsScene(context, canvas, changeSceneCallback);
+                } else if (sceneName === "leaderboard") {
+                    scene = new LeaderBoardScene(context, canvas, changeSceneCallback);
+                } else if (sceneName === "ending") {
+                    scene = new EndingScene(context, canvas, changeSceneCallback);
+                    scene.setFinalTime(data);
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div id="container">
+            <canvas id="game"></canvas>
+            <span style="font-family: joystix; display: none">Hidden text just for loading font before canvas.</span>
+            <hr />
+            <p>If you are on a computer you can play with the keyboard:<p>
+            <ul>
+                <li><span class="item">Arrow keys</span>: Move</li>
+                <li><span class="item">A Key</span>: Shoot</li>
+                <li><span class="item">Spacebar Key</span>: Jump</li>
+            </ul>
+        </div>
+    </body>
+</html>
