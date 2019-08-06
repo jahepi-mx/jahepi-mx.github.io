@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>3D Render</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style type="text/css">
+            body, canvas {
+                background-color: black;
+            }
+            table {
+                color: #fff;
+                border-collapse: collapse;
+            }
+            table td {
+                text-align: left;
+                padding: 0.2em;
+            }
+            div {
+                margin: 0 auto; 
+                text-align: center;
+            }
+            #canvas {
+                border: 1px solid #222;
+                height: 100vh; 
+                width: 100vw; 
+                display: block;
+            }
+        </style>
+        <script type="text/javascript" src="vector.js"></script>
+        <script type="text/javascript" src="matrix4x4.js"></script>
+        <script type="text/javascript" src="triangle.js"></script>
+        <script type="text/javascript" src="mesh.js"></script>
+        <script type="text/javascript" src="clipping.js"></script>
+        <script type="text/javascript" src="utils.js"></script>
+        <script type="text/javascript" src="polygonsorter.js"></script>
+        <script type="text/javascript">
+            var width = 533;
+            var height = 400;
+            var origX = width / 2;
+            var origY = height / 2;
+            var canvas, context;
+            var prevTime = 0;
+            var up = false;
+            var down = false;
+            var left = false;
+            var right = false;
+            var rotateLeft = false;
+            var rotateRight = false;
+            var forward = false;
+            var backward = false;
+            var pitchUp = false;
+            var pitchDown = false;
+            var speed = 600;
+            var cameraRotation = Math.PI / 2;
+            var matrix4x4 = Matrix4x4.getInstance();
+            var mesh = null;
+            var pitch = 0;
+            var yaw = -Math.PI / 4;
+            var projectionMatrix = matrix4x4.getPespectiveProjectionMatrix(90, 1, 100, width / height);
+            var clipping = new Clipping();
+            
+            var cameraVector = new Vector(13000, 2800, 600);
+            var cameraViewDir = new Vector(0, 0, 1);
+            var cameraViewDirTmp = new Vector(0, 0, 1);
+            
+            window.onload = function() {
+                canvas = document.getElementById("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                context = canvas.getContext("2d");
+                document.onkeydown = onKeyDown;
+                document.onkeyup = onKeyUp;
+                
+                onClickLoadBtn();           
+                requestAnimationFrame(update);
+            };
+            
+            function onClickLoadBtn() {
+                var input = document.getElementById("file_input");
+                var file = input.files[0];
+                if (file === undefined) {
+                    var loadFile = new XMLHttpRequest();
+                    loadFile.open('GET', 'maps/temple.obj');
+                    loadFile.onreadystatechange = function() {
+                        loadModelData(loadFile.responseText)
+                    }
+                    loadFile.send();
+                } else {
+                    var reader = new FileReader();
+                    reader.onload = function(event) {
+                        loadModelData(event.target.result);
+                    };
+                    reader.readAsText(file);
+                }
+            }
+            
+            function loadModelData(data) {
+                var input = document.getElementById("file_input");
+                var scale = parseFloat(document.getElementById("model_scale").value);
+                var modelX = parseFloat(document.getElementById("model_x").value);
+                var modelY = parseFloat(document.getElementById("model_y").value);
+                var modelZ = parseFloat(document.getElementById("model_z").value);
+                var cameraX = parseFloat(document.getElementById("camera_x").value);
+                var cameraY = parseFloat(document.getElementById("camera_y").value);
+                var cameraZ = parseFloat(document.getElementById("camera_z").value);
+                cameraVector.x = cameraX;
+                cameraVector.y = cameraY;
+                cameraVector.z = cameraZ;
+                yaw = -Math.PI / 4;
+                pitch = 0;
+                mesh = Utils.getInstance().generateMesh(data, scale);
+                mesh.translation = new Vector(modelX, modelY, modelZ);
+                input.value = "";
+            }
+            
+            function update(time) {
+                var dt = (time - prevTime) / 1000;
+                prevTime = time;
+                
+                context.clearRect(0, 0, width, height);
+
+                // Camera manipulation
+                if (left) {
+                    cameraVector.x -= speed * dt;
+                }
+                if (right) {
+                    cameraVector.x += speed * dt;
+                }
+                if (up) {
+                    cameraVector.y += speed * dt;
+                }
+                if (down) {
+                    cameraVector.y -= speed * dt;
+                }
+                if (forward) {
+                    var scaledVector = cameraViewDir.mul(speed);
+                    cameraVector.addThis(scaledVector.mul(dt));
+                }
+                if (backward) {
+                    var scaledVector = cameraViewDir.mul(-speed);
+                    cameraVector.addThis(scaledVector.mul(dt));
+                }
+                
+                if (pitchUp) {
+                    pitch += cameraRotation * dt;
+                    if (pitch >= Math.PI / 2) {
+                        pitch = Math.PI / 2;
+                    }
+                }
+                
+                if (pitchDown) {
+                    pitch -= cameraRotation * dt;
+                    if (pitch <= -Math.PI / 2) {
+                        pitch = -Math.PI / 2;
+                    }
+                }
+                
+                if (rotateLeft) {
+                    yaw += cameraRotation * dt;
+                }
+                if (rotateRight) {
+                    yaw -= cameraRotation * dt;
+                }
+                
+                var yawRotM = matrix4x4.getYRotationM4x4(yaw);
+                var yawRotMT = matrix4x4.transposeM4x4(yawRotM);
+                var pitchRotM = matrix4x4.getXRotationM4x4(pitch);
+                var newMatrix = matrix4x4.transformM4x4(pitchRotM, yawRotMT);
+                var newMatrixTranspose = matrix4x4.transposeM4x4(newMatrix);
+                cameraViewDir = matrix4x4.transform(newMatrixTranspose, cameraViewDirTmp);
+                
+                var zAxis = cameraViewDir.normalize();
+                var tmp = new Vector(0, 1, 0);
+                var xAxis = tmp.cross(zAxis).normalize();          
+                var yAxis = zAxis.cross(xAxis).normalize();             
+               
+                var camFrom = matrix4x4.transform(projectionMatrix, cameraVector);
+                var camZTo = matrix4x4.transform(projectionMatrix, cameraVector.add(zAxis.mul(20)));
+                var camXTo = matrix4x4.transform(projectionMatrix, cameraVector.add(xAxis.mul(20)));
+                var camYTo = matrix4x4.transform(projectionMatrix, cameraVector.add(yAxis.mul(20)));
+                camFrom.rasterize(width, height);
+                camZTo.rasterize(width, height);
+                camXTo.rasterize(width, height);
+                camYTo.rasterize(width, height);
+                
+                context.beginPath();
+                context.strokeStyle = "#ff0000";
+                context.moveTo(origX + camFrom.x, origY - camFrom.y);
+                context.lineTo(origX + camZTo.x, origY - camZTo.y);
+                context.stroke();
+                
+                context.beginPath();
+                context.strokeStyle = "#00ff00";
+                context.moveTo(origX + camFrom.x, origY - camFrom.y);
+                context.lineTo(origX + camXTo.x, origY - camXTo.y);
+                context.stroke();
+                
+                context.beginPath();
+                context.strokeStyle = "#0000ff";
+                context.moveTo(origX + camFrom.x, origY - camFrom.y);
+                context.lineTo(origX + camYTo.x, origY - camYTo.y);
+                context.stroke();
+                
+                if (mesh !== null) {
+                    mesh.transformViewMatrix(matrix4x4.getIdentityMatrix(), cameraViewDir, cameraVector);
+                    var polygonSorter = new PolygonSorter([mesh], clipping);
+                    polygonSorter.sort();
+                    for (let triangle of polygonSorter.triangles) {
+                        triangle.render(context, projectionMatrix);
+                    }
+                }
+                
+                var fps = parseInt(1 / dt);
+                context.fillStyle = "#00ff00";
+                context.font = "20px Arial";
+                context.fillText(fps, 20, 20);
+                
+                requestAnimationFrame(update);
+            }
+            
+            function onKeyDown(evt) {
+                if (evt.keyCode === 87) up = true;
+                if (evt.keyCode === 65) left = true;
+                if (evt.keyCode === 68) right = true;
+                if (evt.keyCode === 83) down = true;
+                if (evt.keyCode === 37) rotateLeft = true;
+                if (evt.keyCode === 39) rotateRight = true;
+                if (evt.keyCode === 38) forward = true;
+                if (evt.keyCode === 40) backward = true;
+                if (evt.keyCode === 79) pitchDown = true;
+                if (evt.keyCode === 80) pitchUp = true;
+            }
+            
+            function onKeyUp(evt) {
+                if (evt.keyCode === 87) up = false;
+                if (evt.keyCode === 65) left = false;
+                if (evt.keyCode === 68) right = false;
+                if (evt.keyCode === 83) down = false;
+                if (evt.keyCode === 37) rotateLeft = false;
+                if (evt.keyCode === 39) rotateRight = false;
+                if (evt.keyCode === 38) forward = false;
+                if (evt.keyCode === 40) backward = false;
+                if (evt.keyCode === 79) pitchDown = false;
+                if (evt.keyCode === 80) pitchUp = false;
+            }
+        </script>
+    </head>
+    <body>
+        <div>   
+            <table>
+                <tr>
+                    <td>File</td>
+                    <td><input type="file" id="file_input" /></td>
+                </tr>
+                <tr>
+                    <td>Model Scale</td>
+                    <td><input type="number" id="model_scale" value="0.5" /></td>
+                </tr>
+                <tr>
+                    <td>Model Position</td>
+                    <td>
+                        <table>
+                            <tr>
+                                <td>x</td>
+                                <td><input type="number" id="model_x" value="11500" /></td>
+                                <td>y</td>
+                                <td><input type="number" id="model_y" value="900" /></td>
+                                <td>z</td>
+                                <td><input type="number" id="model_z" value="800" /></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Camera Position</td>
+                    <td>
+                        <table>
+                            <tr>
+                                <td>x</td>
+                                <td><input type="number" id="camera_x" value="13000" /></td>
+                                <td>y</td>
+                                <td><input type="number" id="camera_y" value="2800" /></td>
+                                <td>z</td>
+                                <td><input type="number" id="camera_z" value="600" /></td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="2"><input type="button" onclick="onClickLoadBtn()" value="Load New Parameters" /></td>
+                </tr>
+            </table>
+            <canvas id="canvas"></canvas>
+        </div>
+    </body>
+</html>
