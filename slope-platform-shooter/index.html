@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+<html>
+    <head>
+        <title>TODO supply a title</title>
+        <style type="text/css">
+            body {
+                background-color: black;
+            }
+        </style>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script type="text/javascript" src="utils/camera.js"></script>
+        <script type="text/javascript" src="entities/entity.js"></script>
+        <script type="text/javascript" src="math/vector.js"></script>
+        <script type="text/javascript" src="levels/levelmap.js"></script>
+        <script type="text/javascript" src="tiles/tile.js"></script>
+        <script type="text/javascript" src="entities/player.js"></script>
+        <script type="text/javascript" src="entities/monster.js"></script>
+        <script type="text/javascript" src="entities/flyingmonster.js"></script>
+        <script type="text/javascript" src="tiles/movingtile.js"></script>
+        <script type="text/javascript" src="tiles/rotatingtile.js"></script>
+        <script type="text/javascript" src="tiles/ladder.js"></script>
+        <script type="text/javascript" src="tiles/topladder.js"></script>
+        <script type="text/javascript" src="tiles/celilingtile.js"></script>
+        <script type="text/javascript" src="tiles/slopetile.js"></script>
+        <script type="text/javascript" src="tiles/poisonwater.js"></script>
+        <script type="text/javascript" src="utils/parallaxbg.js"></script>
+        <script type="text/javascript" src="entities/bullet.js"></script>
+        <script type="text/javascript" src="entities/particle.js"></script>
+        <script type="text/javascript" src="utils/assets.js"></script>
+        <script type="text/javascript" src="utils/atlas.js"></script>
+        <script type="text/javascript" src="utils/animation.js"></script>
+        <script type="text/javascript" src="utils/cursor.js"></script>
+        <script type="text/javascript" src="levels/level1.js"></script>
+        <script type="text/javascript" src="utils/objectpooling.js"></script>
+        <script type="text/javascript" src="entities/interactiveparticle.js"></script>
+        <script type="text/javascript" src="entities/boss.js"></script>
+        <script type="text/javascript" src="scenes/scenemanager.js"></script>
+        <script type="text/javascript" src="scenes/scene.js"></script>
+        <script type="text/javascript" src="scenes/mainscene.js"></script>
+        <script type="text/javascript" src="scenes/gamescene.js"></script>
+        <script type="text/javascript" src="scenes/endscene.js"></script>
+        <script type="text/javascript" src="utils/config.js"></script>
+        <script type="text/javascript">
+            var canvas;
+            var prevTime = 0;
+            var cursor;
+            var sceneManager = null;
+            var localContext;
+            window.onload = function() {
+                canvas = document.getElementById("engine");
+                canvas.style = "background-color: #ff7f15";
+                canvas.width = window.screen.availHeight * Config.getInstance().screenRatio;
+                canvas.height = window.screen.availHeight;
+                localContext = canvas.getContext("2d");
+                var assets = Assets.getInstance();
+                assets.loadAll(onLoadAssets, onDownloadAssets);
+            };
+            
+            function onDownloadAssets() {
+                localContext.clearRect(0, 0, canvas.width, canvas.height);
+                localContext.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Assets.getInstance().getLoadedRatio() * 100);
+                localContext.font = Math.floor(canvas.height * .14) + "px Impact";
+                localContext.fillStyle = 'white';
+                localContext.textAlign = "center";
+                localContext.fillText("Loading assets... " + percentage + "%", canvas.width / 2, canvas.height / 2);
+            }
+            
+            function onLoadAssets() {
+                var atlas = Atlas.getInstance();
+                atlas.loadAll(onLoadAtlas, onDownloadAtlas);
+            }
+            
+            function onDownloadAtlas() {
+                localContext.clearRect(0, 0, canvas.width, canvas.height);
+                localContext.imageSmoothingEnabled = false;
+                var percentage = Math.floor(Atlas.getInstance().getLoadedRatio() * 100);
+                localContext.font = Math.floor(canvas.height * .14) + "px Impact";
+                localContext.fillStyle = 'white';
+                localContext.textAlign = "center";
+                localContext.fillText("Loading atlas... " + percentage + "%", canvas.width / 2, canvas.height / 2);
+            }
+            
+            function onLoadAtlas() {
+                document.onkeydown = onKeyDown;
+                document.onkeyup = onKeyUp;
+                cursor = Cursor.getInstance();
+                canvas.addEventListener("mousemove", function(evt) {
+                    var rect = canvas.getBoundingClientRect();
+                    var x = evt.clientX - rect.left;
+                    var y = evt.clientY - rect.top;
+                    cursor.update(x, y);
+                });
+                
+                canvas.addEventListener("mousedown", function(evt) {
+                    cursor.isPressed = true;
+                });
+
+                canvas.addEventListener("mouseup", function(evt) {
+                    cursor.isPressed = false;
+                });
+                
+                canvas.addEventListener("mouseout", function(evt) {
+                    cursor.isPressed = false;
+                });
+                sceneManager = SceneManager.getInstance();
+                sceneManager.setCanvas(canvas);
+                sceneManager.setScene("main");
+                requestAnimationFrame(update);
+            }
+
+            var fpsLimit = 0;
+            function update(time) {
+                var dt = (time - prevTime) / 1000;                               
+                var maxFps = 1 / 35;
+                fpsLimit += dt;
+                if (fpsLimit >= maxFps) {
+                    dt = fpsLimit;
+                    fpsLimit = 0;
+                } else {
+                    prevTime = time;
+                    requestAnimationFrame(update);
+                    return;
+                }
+                
+                var fps = 1 / dt;
+                if (fps < 10) {
+                    prevTime = time;
+                    requestAnimationFrame(update);
+                    return;
+                }
+
+                sceneManager.scene.update(dt);
+                sceneManager.scene.render();        
+
+                prevTime = time;
+                requestAnimationFrame(update);
+            }
+            
+            function onKeyDown(key) {
+                sceneManager.scene.input(key.keyCode, true);
+            }
+            
+            function onKeyUp(key) {
+                sceneManager.scene.input(key.keyCode, false);
+            }
+        </script>
+    </head>
+    <body style="margin:0; padding: 0">
+        <canvas id="engine"></canvas>
+    </body>
+</html>
