@@ -6,11 +6,377 @@ and open the template in the editor.
 -->
 <html>
     <head>
-        <title>TODO supply a title</title>
+        <title>Fps Camera Explained</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style type="text/css">
+            * {
+                margin: 0 auto;
+                padding: 0;
+                text-align: center;
+                margin: 0 auto;
+            }
+        </style>
+        <script type="text/javascript">
+            // Fps camera graphic explanation
+            class Vector {
+
+                constructor(x, y, z) {
+                    this.x = x;
+                    this.y = y;
+                    this.z = z;
+                }
+
+                add(vector) {
+                    return new Vector(this.x + vector.x, this.y + vector.y, this.z + vector.z);
+                }
+
+                addThis(vector) {
+                    this.x += vector.x;
+                    this.y += vector.y;
+                    this.z += vector.z;
+                    return this;
+                }
+
+                mul(scalar) {
+                    return new Vector(this.x * scalar, this.y * scalar, this.z * scalar);
+                }
+
+                mulThis(scalar) {
+                    this.x *= scalar;
+                    this.y *= scalar;
+                    this.z *= scalar;
+                    return this;
+                }
+            }
+
+            class Transformations {
+
+                constructor() {
+
+                }
+
+                yaw(vector, deg) {
+                    var rad = deg * toRadians;
+                    var x = new Vector(Math.cos(rad), 0, Math.sin(rad));
+                    var y = new Vector(0, 1, 0);
+                    var z = new Vector(-Math.sin(rad), 0, Math.cos(rad));
+                    x.mulThis(vector.x);
+                    y.mulThis(vector.y);
+                    z.mulThis(vector.z);
+                    return x.add(y).add(z);
+                }
+
+                project(vector) {
+                    var fov = 90 * toRadians * 0.5;
+                    var tan = 1 / Math.tan(fov);
+                    var ar = height / width;
+                    var x = vector.x / vector.z * tan * ar * width * 0.5;
+                    var y = vector.y / vector.z * tan * height * 0.5;
+                    return new Vector(x, y, vector.z);
+                }
+
+            }
+
+            var width = 400;
+            var height = 400;
+            var halfw = width * 0.5;
+            var halfh = height * 0.5;
+            var canvas = null;
+            var context = null;
+            var toRadians = Math.PI / 180;
+            var transf = null;
+            var prevTime = 0;
+            var yawRot = 260;
+            
+            window.onload = function() {
+                canvas = document.getElementById("canvas");
+                context = canvas.getContext("2d");
+                toRadians = Math.PI / 180;
+                transf = new Transformations();
+                canvas.width = width;
+                canvas.height = height;
+                canvas.style = "background-color: #000";
+                document.body.style = "background-color: #000";
+                requestAnimationFrame(update);
+            };
+            
+            function update(time) {
+                var dt = (time - prevTime) / 1000;
+                prevTime = time;
+                yawRot += 10 * dt;
+
+                context.clearRect(0, 0, width, height);
+
+                // Vector space for world space
+                var vsx = new Vector(1, 0, 0);
+                var vsy = new Vector(0, 1, 0);
+                var vsz = new Vector(0, 0, 1);
+
+                // Camera
+                var yaw = 45 * toRadians;
+                var pitch = 45 * toRadians;
+                var cameraDir = new Vector(0, 0, 0);
+                cameraDir.x = Math.cos(yaw) * Math.cos(pitch);
+                cameraDir.y = Math.sin(pitch);
+                cameraDir.z = Math.sin(yaw) * Math.cos(pitch);
+
+                var size = 1;
+                var fontSize = 15;
+                var translate = new Vector(0, -0.5, 1.5);
+                var scaleVsx = transf.project(transf.yaw(vsx.mul(size), yawRot).add(translate));
+                var scaleVsy = transf.project(transf.yaw(vsy.mul(size), yawRot).add(translate));
+                var scaleVsz = transf.project(transf.yaw(vsz.mul(size), yawRot).add(translate));
+                var projectedTranslate = transf.project(translate);
+
+                scaleVsx.y *= -1;
+                scaleVsy.y *= -1;
+                scaleVsz.y *= -1;
+                projectedTranslate.y *= -1;
+                scaleVsx.addThis(new Vector(halfw, halfh, 0));
+                scaleVsy.addThis(new Vector(halfw, halfh, 0));
+                scaleVsz.addThis(new Vector(halfw, halfh, 0));
+                projectedTranslate.addThis(new Vector(halfw, halfh, 0));
+
+                // Draw world vector space
+                context.lineWidth = 1;
+                context.textAlign = "center";
+                context.strokeStyle = "#ff0000";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(scaleVsx.x, scaleVsx.y);
+                context.stroke();
+                context.font = (fontSize / scaleVsx.z) + "px Arial";
+                context.fillStyle = "#ff0000";
+                context.fillText("X axis", scaleVsx.x, scaleVsx.y);
+
+                context.strokeStyle = "#6e7da2";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(scaleVsy.x, scaleVsy.y);
+                context.stroke();
+                context.font = (fontSize / scaleVsy.z) + "px Arial";
+                context.fillStyle = "#6e7da2";
+                context.fillText("Y axis", scaleVsy.x, scaleVsy.y);
+
+                context.strokeStyle = "#0000ff";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(scaleVsz.x, scaleVsz.y);
+                context.stroke();
+                context.font = (fontSize / scaleVsz.z) + "px Arial";
+                context.fillStyle = "#0000ff";
+                context.fillText("Z axis", scaleVsz.x, scaleVsz.y);
+
+                // Draw camera direction
+                var scaleCameraDir = transf.project(transf.yaw(cameraDir.mul(size), yawRot).add(translate));
+                scaleCameraDir.y *= -1;
+                scaleCameraDir.addThis(new Vector(halfw, halfh, 0));
+
+                context.strokeStyle = "#ff9900";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(scaleCameraDir.x, scaleCameraDir.y);
+                context.stroke();
+                context.font = (fontSize / scaleCameraDir.z) + "px Arial";
+                context.fillStyle = "#ff9900";
+                context.fillText("Camera Dir", scaleCameraDir.x, scaleCameraDir.y);
+
+                // Line X
+                var lineX = transf.yaw(new Vector(cameraDir.x, 0, 0), yawRot);
+                var lineX = lineX.add(translate);
+                var projectedLineX = transf.project(lineX);
+
+                projectedLineX.y *= -1;
+                projectedLineX.addThis(new Vector(halfw, halfh, 0));
+                context.lineWidth = 3;
+                context.strokeStyle = "#fff";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(projectedLineX.x, projectedLineX.y);
+                context.stroke();
+
+                // Line Z
+                var lineZ = transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z), yawRot);
+                var lineZ = lineZ.add(translate);
+                var projectedLineZ = transf.project(lineZ);
+
+                projectedLineZ.y *= -1;
+                projectedLineZ.addThis(new Vector(halfw, halfh, 0));
+                context.lineWidth = 1;
+                context.strokeStyle = "#0000ff";
+                context.beginPath();
+                context.moveTo(projectedLineX.x, projectedLineX.y);
+                context.lineTo(projectedLineZ.x, projectedLineZ.y);
+                context.stroke();
+
+                // Line Y
+                var lineY = transf.yaw(new Vector(cameraDir.x, cameraDir.y, cameraDir.z), yawRot);
+                var lineY = lineY.add(translate);
+                var projectedLineY = transf.project(lineY);
+
+                projectedLineY.y *= -1;
+                projectedLineY.addThis(new Vector(halfw, halfh, 0));
+                context.lineWidth = 3;
+                context.strokeStyle = "#f180ff";
+                context.beginPath();
+                context.moveTo(projectedLineZ.x, projectedLineZ.y);
+                context.lineTo(projectedLineY.x, projectedLineY.y);
+                context.stroke();
+
+                // Line XZ
+                var lineFrom = transf.yaw(new Vector(0, 0, cameraDir.z), yawRot);
+                var lineFrom = lineFrom.add(translate);
+                var projectedLineFrom = transf.project(lineFrom);
+
+                projectedLineFrom.y *= -1;
+                projectedLineFrom.addThis(new Vector(halfw, halfh, 0));
+
+                projectedLineY.y *= -1;
+                projectedLineY.addThis(new Vector(halfw, halfh, 0));
+                context.lineWidth = 1;
+                context.strokeStyle = "#0000ff";
+                context.beginPath();
+                context.moveTo(projectedLineFrom.x, projectedLineFrom.y);
+                context.lineTo(projectedLineZ.x, projectedLineZ.y);
+                context.stroke();
+
+                // Yellow
+                context.lineWidth = 3;
+                context.strokeStyle = "#ffff00";
+                context.beginPath();
+                context.moveTo(projectedLineFrom.x, projectedLineFrom.y);
+                context.lineTo(projectedTranslate.x, projectedTranslate.y);
+                context.stroke();
+
+                // Hypotenuse
+                context.lineWidth = 3;
+                context.strokeStyle = "#4bec13";
+                context.beginPath();
+                context.moveTo(projectedTranslate.x, projectedTranslate.y);
+                context.lineTo(projectedLineZ.x, projectedLineZ.y);
+                context.stroke();
+
+                // Pitch angle
+                var from = transf.project(transf.yaw(cameraDir.mul(0.3), yawRot).add(translate));
+                var to = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.3), yawRot).add(translate));
+                var from2 = transf.project(transf.yaw(cameraDir.mul(0.4), yawRot).add(translate));
+                var to2 = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.4), yawRot).add(translate));
+                from.y *= -1;
+                from.addThis(new Vector(halfw, halfh, 0));
+                to.y *= -1;
+                to.addThis(new Vector(halfw, halfh, 0));
+                from2.y *= -1;
+                from2.addThis(new Vector(halfw, halfh, 0));
+                to2.y *= -1;
+                to2.addThis(new Vector(halfw, halfh, 0));
+
+                context.lineWidth = 2;
+                context.strokeStyle = "#FCD134";
+                context.beginPath();
+                context.moveTo(from.x, from.y);
+                context.bezierCurveTo(from2.x, from2.y, to2.x, to2.y, to.x, to.y);
+                context.stroke();
+
+                var tethaPos = transf.project(transf.yaw(cameraDir.mul(0.7).add(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.7)).mul(0.5), yawRot).add(translate).add(new Vector(0, -0.1, 0)));
+                tethaPos.y *= -1;
+                tethaPos.addThis(new Vector(halfw, halfh, 0));
+                context.font = (fontSize / tethaPos.z) + "px Arial";
+                context.fillStyle = "#FCD134";
+                context.fillText("theta(θ)", tethaPos.x, tethaPos.y);
+
+                // Yaw angle
+                var from = transf.project(transf.yaw(vsx.mul(0.3), yawRot).add(translate));
+                var to = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.3), yawRot).add(translate));
+                var from2 = transf.project(transf.yaw(vsx.mul(0.4), yawRot).add(translate));
+                var to2 = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.4), yawRot).add(translate));
+                from.y *= -1;
+                from.addThis(new Vector(halfw, halfh, 0));
+                to.y *= -1;
+                to.addThis(new Vector(halfw, halfh, 0));
+                from2.y *= -1;
+                from2.addThis(new Vector(halfw, halfh, 0));
+                to2.y *= -1;
+                to2.addThis(new Vector(halfw, halfh, 0));
+
+                context.lineWidth = 2;
+                context.strokeStyle = "#FE621D";
+                context.beginPath();
+                context.moveTo(from.x, from.y);
+                context.bezierCurveTo(from2.x, from2.y, to2.x, to2.y, to.x, to.y);
+                context.stroke();
+
+                var tethaPos = transf.project(transf.yaw(vsx.mul(0.6).add(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.6)).mul(0.5), yawRot).add(translate));
+                tethaPos.y *= -1;
+                tethaPos.addThis(new Vector(halfw, halfh, 0));
+                context.font = (fontSize / tethaPos.z) + "px Arial";
+                context.fillStyle = "#FE621D";
+                context.fillText("phi(φ)", tethaPos.x, tethaPos.y);
+
+                // Yaw angle
+                var v1 = new Vector(0, 0, cameraDir.z);
+                var v2 = new Vector(cameraDir.x, 0, cameraDir.z);
+                v1.x = v1.x - v2.x;
+                v1.z = v1.z - v2.z;
+
+
+                var from = transf.project(transf.yaw(v1.mul(0.3).add(v2), yawRot).add(translate));
+                var to = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.7), yawRot).add(translate));
+                var from2 = transf.project(transf.yaw(v1.mul(0.4).add(v2), yawRot).add(translate));
+                var to2 = transf.project(transf.yaw(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.6), yawRot).add(translate));
+                from.y *= -1;
+                from.addThis(new Vector(halfw, halfh, 0));
+                to.y *= -1;
+                to.addThis(new Vector(halfw, halfh, 0));
+                from2.y *= -1;
+                from2.addThis(new Vector(halfw, halfh, 0));
+                to2.y *= -1;
+                to2.addThis(new Vector(halfw, halfh, 0));
+
+                context.lineWidth = 2;
+                context.strokeStyle = "#00CFC1";
+                context.beginPath();
+                context.moveTo(from.x, from.y);
+                context.bezierCurveTo(from2.x, from2.y, to2.x, to2.y, to.x, to.y);
+                context.stroke();
+
+                var tethaPos = transf.project(transf.yaw(v1.mul(0.6).add(v2).add(new Vector(cameraDir.x, 0, cameraDir.z).mul(0.6)).mul(0.5), yawRot).add(translate));
+                tethaPos.y *= -1;
+                tethaPos.addThis(new Vector(halfw, halfh, 0));
+                context.font = (fontSize / tethaPos.z) + "px Arial";
+                context.fillStyle = "#00CFC1";
+                context.fillText("phi(φ)", tethaPos.x, tethaPos.y);
+
+                context.fillStyle = "#4bec13";
+                context.fillRect(10, 10, 10, 10);
+                context.textAlign = "left";
+                context.font = "12px Arial";
+                context.fillText("Hyp = cos(θ)", 25, 20);
+
+                context.fillStyle = "#fff";
+                context.fillRect(10, 30, 10, 10);
+                context.textAlign = "left";
+                context.font = "12px Arial";
+                context.fillText("Camera Dir X = cos(φ)(Hyp) = cos(φ)cos(θ)", 25, 40);
+
+                context.fillStyle = "#f180ff";
+                context.fillRect(10, 50, 10, 10);
+                context.textAlign = "left";
+                context.font = "12px Arial";
+                context.fillText("Camera Dir Y = sin(θ)", 25, 60);
+
+                context.fillStyle = "#ffff00";
+                context.fillRect(10, 70, 10, 10);
+                context.textAlign = "left";
+                context.font = "12px Arial";
+                context.fillText("Camera Dir Z = sin(φ)(Hyp) = sin(φ)cos(θ)", 25, 80);
+
+                requestAnimationFrame(update);
+            }
+
+        </script>
     </head>
     <body>
-        <div>TODO write content</div>
+        <canvas id="canvas"></canvas>
     </body>
 </html>
