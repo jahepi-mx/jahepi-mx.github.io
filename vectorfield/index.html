@@ -1,0 +1,178 @@
+<html>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
+        <script src="vector.js"></script>
+        <script type="text/javascript" >
+    
+
+        var width = 400;
+        var height = 400;
+        var context = null;
+        var context3d = null;
+        var prevTime = 0; 
+        var particles = [];
+        var particles3d = [];
+        var centerVector = new Vector(width * 0.5, height * 0.5);
+
+        // 2D Canvas vars
+        var funcX = "", funcY = "";
+        var vectorLen = 0, particleSize = 0, particlesPerRow = 0, maxLen = 0;
+
+        // 3D Canvas vars
+        var func3dX = "", func3dY = ""; func3dZ = "";
+        var vectorLen3d = 0, particleSize3d = 0, particlesPerRow3d = 0;
+
+        window.onload = function() {
+            var canvas = document.getElementById("canvas");
+            canvas.width = width;
+            canvas.height = height;
+            context = canvas.getContext("2d");
+            var canvas3d = document.getElementById("canvas3d");
+            canvas3d.width = width;
+            canvas3d.height = height;
+            context3d = canvas3d.getContext("2d");
+            init2DCanvas();
+            init3DCanvas();
+            requestAnimationFrame(update);
+        };
+
+        function init2DCanvas() {
+            particles = [];
+            funcX = new Function("return " + document.getElementById('x').value)();
+            funcY = new Function("return " + document.getElementById('y').value)();
+            vectorLen = parseFloat(document.getElementById('vectorLength').value);
+            particleSize = parseFloat(document.getElementById('particleSize').value);
+            particlesPerRow = parseFloat(document.getElementById('particlesPerRow').value);
+            var gap = (width - particlesPerRow * particleSize) / (particlesPerRow - 1);
+            for (var y = -height * 0.5; y <= height * 0.5; y += gap) {
+                for (var x = -width * 0.5; x <= width * 0.5; x += gap) {
+                    particles.push(new Vector(x, y, 0));
+                }
+            }
+        }
+
+        function init3DCanvas() {
+            particles3d = [];
+            func3dX = new Function("return " + document.getElementById('x3d').value)();
+            func3dY = new Function("return " + document.getElementById('y3d').value)();
+            func3dZ = new Function("return " + document.getElementById('z3d').value)();
+            vectorLen3d = parseFloat(document.getElementById('vectorLength3d').value);
+            particleSize3d = parseFloat(document.getElementById('particleSize3d').value);
+            particlesPerRow3d = parseFloat(document.getElementById('particlesPerRow3d').value);
+            var gap = (width - particlesPerRow3d * particleSize3d) / (particlesPerRow3d - 1);
+            for (var z = -100; z <= 100; z += 40) {
+                for (var y = -height * 0.5; y <= height * 0.5; y += gap) {
+                    for (var x = -width * 0.5; x <= width * 0.5; x += gap) {
+                        particles3d.push(new Vector(x, y, z));
+                    }
+                }
+            }
+        }
+
+        function translateToCenter(vector) {
+            return new Vector(vector.x + centerVector.x, -vector.y + centerVector.y)
+        }
+
+        function update(time) {
+            var dt = (time - prevTime) / 1000;
+            dt = dt >= 1 ? 1 / 60 : dt;
+            context.clearRect(0, 0, width, height);
+            context3d.clearRect(0, 0, width, height);
+            for (let particle of particles) {
+                var tmp = new Vector(funcX(particle), funcY(particle), 0);
+                maxLen = Math.max(maxLen, tmp.lengthNoSqrt());
+                var colorRatio = tmp.lengthNoSqrt() / maxLen;
+                var colorA = parseInt(255 * (1 - colorRatio));
+                var colorB = parseInt(255 * colorRatio);
+                context.fillStyle = 'rgba(' + colorA + ',' + colorB + ',' + colorA + ',1)';
+                particle.addVector(tmp.scale(vectorLen * dt));
+                tmp = translateToCenter(particle);
+                context.fillRect(tmp.x, tmp.y, particleSize, particleSize);
+            }
+            for (let particle of particles3d) {
+                var tmp = new Vector(func3dX(particle), func3dY(particle), func3dZ(particle));
+                particle.addVector(tmp.scale(vectorLen3d * dt));
+                var ratio = (200 + particle.z) / 200;
+                var x = ratio * particle.x;
+                var y = ratio * particle.y;
+                tmp = translateToCenter(new Vector(x, y, 0));
+                context3d.fillRect(tmp.x, tmp.y, particleSize3d * ratio, particleSize3d * ratio);
+            }
+            prevTime = time;
+            requestAnimationFrame(update);
+        }
+        </script>
+
+    </head>
+    <body>
+        <div class="container">
+            <div class="row justify-content-between">
+                <hr /><h2>2d vectorial field</h2><hr />
+                <div class="col-4">
+                    <canvas id="canvas"></canvas>
+                </div>
+                <div class="col-4">
+                    <div class="mb-3">
+                        <label for="particleSize" class="form-label">Particle size</label>
+                        <input type="number" class="form-control" id="particleSize" placeholder="" value="2">
+                    </div>
+                    <div class="mb-3">
+                        <label for="particlesPerRow" class="form-label">Particles per row</label>
+                        <input type="number" class="form-control" id="particlesPerRow" placeholder="" value="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="vectorLength" class="form-label">Vector length</label>
+                        <input type="number" class="form-control" id="vectorLength" placeholder="" value="30">
+                    </div>
+                    <div class="mb-3">
+                        <label for="x" class="form-label">x=f(pos)</label>
+                        <textarea class="form-control" id="x" rows="3">function (pos) { return pos.y; }</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="y" class="form-label">y=f(pos)</label>
+                        <textarea class="form-control" id="y" rows="3">function (pos) { return -pos.x; }</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <button onclick="init2DCanvas()" type="submit" class="btn btn-primary mb-3">Play</button>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-between">
+                <hr /><h2>3d vectorial field</h2><hr />
+                <div class="col-4">
+                    <canvas id="canvas3d"></canvas>
+                </div>
+                <div class="col-4">
+                    <div class="mb-3">
+                        <label for="particleSize3d" class="form-label">Particle size</label>
+                        <input type="number" class="form-control" id="particleSize3d" placeholder="" value="2">
+                    </div>
+                    <div class="mb-3">
+                        <label for="particlesPerRow3d" class="form-label">Particles per row</label>
+                        <input type="number" class="form-control" id="particlesPerRow3d" placeholder="" value="20">
+                    </div>
+                    <div class="mb-3">
+                        <label for="vectorLength3d" class="form-label">Vector length</label>
+                        <input type="number" class="form-control" id="vectorLength3d" placeholder="" value="100">
+                    </div>
+                    <div class="mb-3">
+                        <label for="x3d" class="form-label">x=f(pos)</label>
+                        <textarea class="form-control" id="x3d" rows="3">function (pos) { return -pos.z / pos.y; }</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="y3d" class="form-label">y=f(pos)</label>
+                        <textarea class="form-control" id="y3d" rows="3">function (pos) { return Math.cos(pos.x / pos.y); }</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="z3d" class="form-label">z=f(pos)</label>
+                        <textarea class="form-control" id="z3d" rows="3">function (pos) { return pos.x / pos.y; }</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <button onclick="init3DCanvas()" type="submit" class="btn btn-primary mb-3">Play</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
