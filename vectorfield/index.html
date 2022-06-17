@@ -93,7 +93,7 @@
             for (let particle of particles3d) {
                 var tmp = new Vector(func3dX(particle), func3dY(particle), func3dZ(particle));
                 particle.addVector(tmp.scale(vectorLen3d * dt));
-                var ratio = (200 + particle.z) / 200;
+                var ratio = 200 / (200 + particle.z);
                 var x = ratio * particle.x;
                 var y = ratio * particle.y;
                 tmp = translateToCenter(new Vector(x, y, 0));
