@@ -1,0 +1,317 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <style>
+        body {
+            background-color: black;
+            margin: 1em;
+        }
+
+        label {
+            color: black;
+        }
+
+        h3 {
+            color: white;
+            font-weight: normal;
+        }
+    </style>
+    <script>
+        function fire() {
+            $('#tableData').empty();
+
+            var initialAmount = parseFloat($('#initialAmount').val());
+            var monthly = parseFloat($('#monthly').val());
+            var interest = parseFloat($('#interest').val()) / 100;
+            var years = parseInt($('#years').val());
+            var inflation = parseFloat($('#inflation').val()) / 100;
+            var retirementRatio = parseFloat($('#retirementRatio').val()) / 100;
+            var periodicity = parseInt($("#periodicity").val());
+            var enableInflation = $('#enableInflation').is(":checked");
+
+            var interestRatio = periodicity / 12;
+            var periodicityFactor = 12 / periodicity;
+            var earnRatio = 1 + interest * interestRatio;
+            var finalSum = initialAmount * Math.pow(earnRatio, years * periodicityFactor);
+            for (let a = 0; a < years * periodicityFactor; a++) {
+                monthly = enableInflation && a > 0 && a % periodicityFactor == 0 ? monthly * (inflation + 1) : monthly;
+                finalSum += periodicity * monthly * Math.pow(earnRatio, years * periodicityFactor - a);
+                $('#tableData').append('<tr><td>' + (a * periodicity + 1) + ' - ' + ((a + 1) * periodicity) + '</td><td>$' + numberWithCommas(finalSum) + '</td><td>$' + numberWithCommas(monthly) + '</td></tr>');
+            }
+            var finalSumInflation = finalSum * Math.pow(1 - inflation, years);
+            $("#finalAmount").html('$' + numberWithCommas(finalSum));
+            $("#annualWithdrawal").html('$' + numberWithCommas(finalSum * retirementRatio));
+            $("#monthlyWithdrawal").html('$' + numberWithCommas(finalSum * retirementRatio / 12));
+            $("#ifinalAmount").html('$' + numberWithCommas(finalSumInflation));
+            $("#iannualWithdrawal").html('$' + numberWithCommas(finalSumInflation * retirementRatio));
+            $("#imonthlyWithdrawal").html('$' + numberWithCommas(finalSumInflation * retirementRatio / 12));
+        }
+        function numberWithCommas(x) {
+            return x.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+    </script>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="row">
+            <h3>¿Qué necesito para ser parte del grupo FIRE?</h1>
+        </div>
+        <div class="row">
+            <div class="col-4">
+
+                <div class="card">
+                    <div class="card-body">
+                        <div class="mb-3 row">
+                            <label for="initialAmount" class="col-sm-6 col-form-label">Monto Inicial</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="initialAmount" value="0"
+                                    placeholder="Monto Inicial">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="monthly" class="col-sm-6 col-form-label">Aportación Mensual</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="monthly" value="1000"
+                                    placeholder="Aportación Mensual">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="interest" class="col-sm-6 col-form-label">% Interés</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="interest" value="10"
+                                    placeholder="% Interés">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="periodicity" class="col-sm-6 col-form-label">Plazo Interés</label>
+                            <div class="col-sm-6">
+                                <select class="form-control" name="periodicity" id="periodicity">
+                                    <option value="1">Mensual</option>
+                                    <option value="3">Trimestral</option>
+                                    <option value="6" selected="selected">Semestral</option>
+                                    <option value="12">Anual</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="years" class="col-sm-6 col-form-label">Años</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="years" value="14"
+                                    placeholder="Número de Años">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="inflation" class="col-sm-6 col-form-label">% Inflación</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="inflation" value="4"
+                                    placeholder="% Inflación">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="enableInflation" class="col-sm-6 col-form-label">Inflación Aporte
+                                Mensual</label>
+                            <div class="col-sm-6">
+                                <input type="checkbox" class="form-check-input" id="enableInflation" value="1"
+                                    checked="checked">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <label for="retirementRatio" class="col-sm-6 col-form-label">% Retiro</label>
+                            <div class="col-sm-6">
+                                <input type="number" class="form-control" id="retirementRatio" value="5"
+                                    placeholder="% Retiro">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 row">
+                            <div class="col-sm-6"></div>
+                            <div class="col-sm-6">
+                                <button type="button" class="btn btn-light mb-3" onclick="fire()">Calcular</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <hr />
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Montos Finales</h5>
+                        <p class="card-text">Todos los montos necesarios para evaluar si ya estás listo para retirarte
+                            (FIRE)</p>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Monto Final: <strong style="color:red"
+                                id="finalAmount">$0.00</strong></li>
+                        <li class="list-group-item">Retiro Anual: <strong style="color:red"
+                                id="annualWithdrawal">$0.00</strong></li>
+                        <li class="list-group-item">Retiro Mensual: <strong style="color:red"
+                                id="monthlyWithdrawal">$0.00</strong></li>
+                        <li class="list-group-item">Monto Final Inflación: <strong style="color:red"
+                                id="ifinalAmount">$0.00</strong></li>
+                        <li class="list-group-item">Retiro Anual Inflación: <strong style="color:red"
+                                id="iannualWithdrawal">$0.00</strong></li>
+                        <li class="list-group-item">Retiro Mensual Inflación: <strong style="color:red"
+                                id="imonthlyWithdrawal">$0.00</strong></li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="col-8">
+                <div class="card">
+                    <div class="card-body">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Rango Mes</th>
+                                    <th scope="col">Acumulado</th>
+                                    <th scope="col">Mensual</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableData">
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                                <tr>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
