@@ -30,23 +30,29 @@
 
             var initialAmount = parseFloat($('#initialAmount').val());
             var monthly = parseFloat($('#monthly').val());
+            var monthly2 = parseFloat($('#monthly').val());
             var interest = parseFloat($('#interest').val()) / 100;
             var years = parseInt($('#years').val());
             var inflation = parseFloat($('#inflation').val()) / 100;
             var retirementRatio = parseFloat($('#retirementRatio').val()) / 100;
             var periodicity = parseInt($("#periodicity").val());
             var enableInflation = $('#enableInflation').is(":checked");
-
+            var accumulated = initialAmount;
+            var invested = initialAmount;
             var interestRatio = periodicity / 12;
             var periodicityFactor = 12 / periodicity;
             var earnRatio = 1 + interest * interestRatio;
             var finalSum = initialAmount * Math.pow(earnRatio, years * periodicityFactor);
-            for (let a = 0; a < years * periodicityFactor; a++) {
-                monthly = enableInflation && a > 0 && a % periodicityFactor == 0 ? monthly * (inflation + 1) : monthly;
-                finalSum += periodicity * monthly * Math.pow(earnRatio, years * periodicityFactor - a);
-                $('#tableData').append('<tr><td>' + (a * periodicity + 1) + ' - ' + ((a + 1) * periodicity) + '</td><td>$' + numberWithCommas(finalSum) + '</td><td>$' + numberWithCommas(monthly) + '</td></tr>');
+            for (let a = 0, pow = 0; a < years * periodicityFactor; a++) {
+                let currentInflation = Math.pow(inflation + 1, enableInflation && a > 0 && a % periodicityFactor == 0 ? ++pow : pow);
+                finalSum += periodicity * monthly * Math.pow(earnRatio, years * periodicityFactor - a) * currentInflation;
+                accumulated *= earnRatio;
+                accumulated += periodicity * monthly * earnRatio * currentInflation;
+                invested += monthly * currentInflation * periodicity;
+                $('#tableData').append('<tr><td>' + (a * periodicity + 1) + ' - ' + ((a + 1) * periodicity) + '</td><td>$' + numberWithCommas(accumulated) + '</td><td>$' + numberWithCommas(monthly * currentInflation) + '</td></tr>');
             }
             var finalSumInflation = finalSum * Math.pow(1 - inflation, years);
+            $("#investedAmount").html('$' + numberWithCommas(invested));
             $("#finalAmount").html('$' + numberWithCommas(finalSum));
             $("#annualWithdrawal").html('$' + numberWithCommas(finalSum * retirementRatio));
             $("#monthlyWithdrawal").html('$' + numberWithCommas(finalSum * retirementRatio / 12));
@@ -156,6 +162,8 @@
                             (FIRE)</p>
                     </div>
                     <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Total Invertido: <strong style="color:red"
+                            id="investedAmount">$0.00</strong></li>
                         <li class="list-group-item">Monto Final: <strong style="color:red"
                                 id="finalAmount">$0.00</strong></li>
                         <li class="list-group-item">Retiro Anual: <strong style="color:red"
