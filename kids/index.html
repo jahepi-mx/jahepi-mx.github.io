@@ -1,0 +1,120 @@
+<html>
+
+<head>
+<style>
+    body {
+        padding: 0;
+        margin: 0;
+    }
+    #canvas { 
+        height: 100vh; 
+        width: 100vw; 
+        display: block;
+    }
+</style>
+<script>
+var canvas = null
+var context = null;
+var cx = 0;
+var cy = 0;
+var width = 1024;
+var height = 768;
+var prevTime = 0;
+var degrees = 0;
+var len = 0;
+var red = 0;
+var green = 0;
+var blue = 0;
+var prevX = 0;
+var prevY = 0;
+var firstTime = true;
+var index = 0;
+var params = [];
+
+window.onload = function() {
+    canvas = document.getElementById("canvas");
+    canvas.style.background = "black";
+    canvas.width = width;
+    canvas.height = height;
+    context = canvas.getContext("2d");
+    cx = canvas.width * 0.5;
+    cy = canvas.height * 0.5;
+    len = Math.min(cx, cy) * 0.5;
+    document.onkeydown = onKeyDown;
+
+    params = [
+      {len: canvas.height * 0.45, line: canvas.height * 0.01999999, offsetX: 0, offsetY: 0, dSpeed: 30},
+      {len: canvas.height * 0.4, line: canvas.height * 0.019999, offsetX: 0, offsetY: -canvas.height * 0.30, dSpeed: 30},
+      {len: canvas.height * 0.25, line: canvas.height * 0.019999, offsetX: 0, offsetY: 0, dSpeed: 30},
+      {len: canvas.height * 0.4, line: canvas.height * 0.1, offsetX: 0, offsetY: 0, dSpeed: 60},
+    ];
+
+    requestAnimationFrame(update);
+}
+
+var functions = [
+  (deg) => { return Math.cos(8 * deg * Math.PI / 180); /*Flower 1*/ },
+  (deg) => { return Math.sin(deg * Math.PI / 180) + Math.pow(Math.sin(5 * deg * Math.PI / 180 * 0.5), 3); /*Flower 2*/ },
+  (deg) => { return Math.pow(Math.cos(5 * deg * Math.PI / 180), 2) + Math.sin(3 * deg * Math.PI / 180) + 0.3; /*Bird*/ },
+  (deg) => { return deg * Math.PI / 180 * 0.1; /*Spiral*/ },
+];
+
+function change(n) {
+  index += n;
+  index = (index + functions.length) % functions.length;
+  firstTime = true;
+  degrees = red = green = blue = 0;
+  context.clearRect(0, 0, width, height);
+}
+
+function onKeyDown(evt) {
+  console.log(evt.keyCode);
+  if (evt.keyCode == 39) {
+    change(1);
+  } else if (evt.keyCode == 37) {
+    change(-1);
+  }
+}
+
+function update(time) {
+  var dt = (time - prevTime) / 1000;
+  prevTime = time;
+
+  degrees += params[index].dSpeed * dt;
+  red += 30 * dt;
+  green += 50 * dt;
+  blue += 15 * dt;
+
+  var redInt = Math.abs(Math.cos(red * Math.PI / 180)) * 255;
+  var greenInt = Math.abs(Math.cos(green * Math.PI / 180)) * 255;
+  var blueInt = Math.abs(Math.cos(blue * Math.PI / 180)) * 255;
+
+  var r = functions[index](degrees) * params[index].len;
+  var x = Math.cos(degrees * Math.PI / 180) * r;
+  var y = Math.sin(degrees * Math.PI / 180) * r;
+
+  var fx = prevX + (x - prevX) * 1.1;
+  var fy = prevY + (y - prevY) * 1.1;
+
+  if (firstTime == false) {
+    context.beginPath();
+    context.moveTo(cx + params[index].offsetX + prevX, cy - (params[index].offsetY + prevY));
+    context.lineTo(cx + params[index].offsetX + fx, cy - (params[index].offsetY + fy));
+    context.lineWidth = Math.abs(Math.cos(red * Math.PI / 180)) * params[index].line;
+    context.strokeStyle = "rgb(" + parseInt(redInt) + " " + parseInt(greenInt) + " " + parseInt(blueInt) + ")";
+    context.stroke();
+  }
+  firstTime = false;
+  prevX = x;
+  prevY = y;
+
+  requestAnimationFrame(update);
+}
+</script>
+
+</head>
+
+
+<canvas id="canvas"></canvas>
+
+</html>
