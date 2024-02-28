@@ -59,19 +59,19 @@
       painting5.addGraphic(graphic5a);
       painting5.addGraphic(graphic5b);
 
-      var graphic6 = new Graphic(canvas.height * 0.45, 20, 0, 0, 270, (deg) => { return Math.sin(5 / 6 * deg * Math.PI / 180); }, 30, 50, 15, false);
+      var graphic6 = new Graphic(canvas.height * 0.45, 20, 0, 0, 120, (deg) => { return Math.sin(5 / 6 * deg * Math.PI / 180); }, 30, 50, 15, false);
       var painting6 = new Painting();
       painting6.addGraphic(graphic6);
 
-      var graphic7 = new Graphic(canvas.height * 0.15, 10, 0, 0, 180, (deg) => { return 3 * Math.sin(Math.PI * deg * Math.PI / 180); }, 30, 50, 15, false);
+      var graphic7 = new Graphic(canvas.height * 0.15, 10, 0, 0, 120, (deg) => { return 3 * Math.sin(Math.PI * deg * Math.PI / 180); }, 30, 50, 15, false);
       var painting7 = new Painting();
       painting7.addGraphic(graphic7);
 
-      var graphic8 = new Graphic(canvas.height * 0.12, 10, 0, 250, 120, (deg) => { return 3.5 - 1.5 * Math.abs(Math.cos(deg * Math.PI / 180)) * Math.sqrt(1.3 + Math.abs(Math.sin(deg * Math.PI / 180))) + Math.cos(2 * deg * Math.PI / 180) - 3 * Math.sin(deg * Math.PI / 180) + 0.7 * Math.cos(12.2 * deg * Math.PI / 180); }, 30, 50, 15, false);
+      var graphic8 = new Graphic(canvas.height * 0.12, 10, 0, 250, 60, (deg) => { return 3.5 - 1.5 * Math.abs(Math.cos(deg * Math.PI / 180)) * Math.sqrt(1.3 + Math.abs(Math.sin(deg * Math.PI / 180))) + Math.cos(2 * deg * Math.PI / 180) - 3 * Math.sin(deg * Math.PI / 180) + 0.7 * Math.cos(12.2 * deg * Math.PI / 180); }, 30, 50, 15, false);
       var painting8 = new Painting();
       painting8.addGraphic(graphic8);
 
-      var graphic9 = new Graphic(canvas.height * 0.48, 30, 0, 0, 60, (deg) => { return Math.cos(Math.sin(Math.cos(10 * deg * Math.PI / 180))); }, 30, 50, 15, false);
+      var graphic9 = new Graphic(canvas.height * 0.48, 30, 0, 0, 30, (deg) => { return Math.cos(Math.sin(Math.cos(10 * deg * Math.PI / 180))); }, 30, 50, 15, false);
       var painting9 = new Painting();
       painting9.addGraphic(graphic9);
 
@@ -136,7 +136,7 @@
       }
 
       render(dt, context, cx, cy) {
-        this.degrees += this.dSpeed * dt;
+        this.degrees += this.dSpeed * 2.5 * dt;
         this.red += this.sRed * dt;
         this.green += this.sGreen * dt;
         this.blue += this.sBlue * dt;
